@@ -1,0 +1,154 @@
+---
+title: '\vspace{-2cm} Practical Machine Learning: Final Project'
+output:
+  html_document:
+    keep_md: yes
+  geometry: margin=1.75cm
+---
+
+```{r setup, include=FALSE}
+# Setting global options
+knitr::opts_chunk$set(echo = TRUE,self.contained = FALSE,fig.path = "figures/",fig.width=8, fig.height=4, warning = FALSE)
+```
+
+## Executive Summary
+
+###### Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project,  goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+###### The goal of this project is to predict the manner in which they did the exercise.
+
+## Library and data loading
+
+\scriptsize
+```{r}
+# Loading the mtcars dataset
+library(caret)
+library(rattle)
+library(rpart)
+
+# Loading training data
+Train_In <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"),header=TRUE)
+dim(Train_In)
+
+# Loading testing data and keeping for Validation purposes
+Valid_In <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"),header=TRUE)
+dim(Valid_In)
+
+str(Train_In)
+
+```
+\normalsize
+
+##### The training data set is made of 19622 observations on 160 columns. 
+
+## Cleaning the input data.
+
+##### Removing variables containing missing values
+```{r}
+TrainData <- Train_In[, colSums(is.na(Train_In)) == 0]
+dim(TrainData)
+
+ValidData <- Valid_In[, colSums(is.na(Valid_In)) == 0]
+dim(ValidData)
+
+```
+
+##### Removing user and timestamp variables 
+```{r}
+TrainData <- TrainData[, -c(1:7)]
+dim(TrainData)
+
+ValidData <- ValidData[, -c(1:7)]
+dim(ValidData)
+
+```
+
+
+## Cleaning variables that are near zero variance and preparing for prediction
+
+```{r}
+set.seed(1234) 
+
+# Removing variables that are near zero variance
+
+inTrain <- createDataPartition(TrainData$classe, p = 0.7, list = FALSE)
+TrainData <- TrainData[inTrain, ]
+TestData <- TrainData[-inTrain, ]
+dim(TrainData)
+dim(TestData)
+
+NZV <- nearZeroVar(TrainData)
+TrainData <- TrainData[, -NZV]
+TestData  <- TestData[, -NZV]
+dim(TrainData)
+dim(TestData)
+```
+
+##### This brings us down to 53 variables.
+
+##### In the following sections, we will test 3 different models: Classification Tree, Random Forest and Gradient Boosting Method
+
+## Train with classification tree
+
+\scriptsize
+```{r}
+set.seed(12345)
+
+decisionTreeMod1 <- rpart(classe ~ ., data=TrainData, method="class")
+fancyRpartPlot(decisionTreeMod1)
+
+predictTreeMod1 <- predict(decisionTreeMod1, TestData, type = "class")
+confusionMatrix(predictTreeMod1, as.factor(TestData$classe))$overall[1]
+
+```   
+\normalsize
+
+##### The accuracy rate of this model is 0.7642
+
+## Train with Random Forest
+
+\scriptsize
+```{r}
+
+controlRF <- trainControl(method="cv", number=3, verboseIter=FALSE)
+modRF1 <- train(classe ~ ., data=TrainData, method="rf", trControl=controlRF)
+modRF1$finalModel
+
+predictRF1 <- predict(modRF1, newdata=TestData)
+confusionMatrix(predictRF1, as.factor(TestData$classe))$overall[1]
+
+```
+\normalsize
+
+##### This model shows an accuracy of 1, which this could be due to overfitting. So let's check against gbm model.
+
+## Train with Gradient Boosted model
+
+\scriptsize
+```{r}
+
+set.seed(12345)
+controlGBM <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
+modGBM  <- train(classe ~ ., data=TrainData, method = "gbm", trControl = controlGBM, verbose = FALSE)
+modGBM$finalModel
+
+predictGBM <- predict(modGBM, newdata=TestData)
+confusionMatrix(predictGBM, as.factor(TestData$classe))$overall[1]
+
+```
+\normalsize
+
+##### The accuracy of this model is 0.9731
+
+##### It appears that Random Forest has the best accuracy. So we will use that against the validation data.
+
+## Applying model created through Random Forect to predict from validation data
+
+\scriptsize
+```{r}
+Results <- predict(modRF1, newdata=ValidData)
+Results
+```
+\normalsize
+
+##### We will use these results to answer the course project quiz questions
