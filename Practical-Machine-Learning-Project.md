@@ -19,7 +19,6 @@ output:
 \scriptsize
 
 ```r
-# Loading the mtcars dataset
 library(caret)
 ```
 
@@ -53,8 +52,8 @@ library(rattle)
 library(rpart)
 
 # Loading training data
-Train_In <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"),header=TRUE)
-dim(Train_In)
+Train <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"),header=TRUE)
+dim(Train)
 ```
 
 ```
@@ -63,8 +62,8 @@ dim(Train_In)
 
 ```r
 # Loading testing data and keeping for Validation purposes
-Valid_In <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"),header=TRUE)
-dim(Valid_In)
+Valid <- read.csv(url("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"),header=TRUE)
+dim(Valid)
 ```
 
 ```
@@ -72,7 +71,7 @@ dim(Valid_In)
 ```
 
 ```r
-str(Train_In)
+str(Train)
 ```
 
 ```
@@ -187,7 +186,7 @@ str(Train_In)
 ##### Removing variables containing missing values
 
 ```r
-TrainData <- Train_In[, colSums(is.na(Train_In)) == 0]
+TrainData <- Train[, colSums(is.na(Train)) == 0]
 dim(TrainData)
 ```
 
@@ -196,7 +195,7 @@ dim(TrainData)
 ```
 
 ```r
-ValidData <- Valid_In[, colSums(is.na(Valid_In)) == 0]
+ValidData <- Valid[, colSums(is.na(Valid)) == 0]
 dim(ValidData)
 ```
 
@@ -225,13 +224,13 @@ dim(ValidData)
 ```
 
 
-## Cleaning variables that are near zero variance and preparing for prediction
+## Partioning the training data into train and test. Cleaning variables that are near zero variance and preparing for prediction
 
 
 ```r
 set.seed(1234) 
 
-# Removing variables that are near zero variance
+# Partioning into train and test
 
 inTrain <- createDataPartition(TrainData$classe, p = 0.7, list = FALSE)
 TrainData <- TrainData[inTrain, ]
@@ -252,6 +251,8 @@ dim(TestData)
 ```
 
 ```r
+# Removing variables that are near zero variance
+
 NZV <- nearZeroVar(TrainData)
 TrainData <- TrainData[, -NZV]
 TestData  <- TestData[, -NZV]
@@ -272,7 +273,7 @@ dim(TestData)
 
 ##### This brings us down to 53 variables.
 
-##### In the following sections, we will test 3 different models: Classification Tree, Random Forest and Gradient Boosting Method
+##### In the following sections, we will test 3 different models: Classification Tree, Random Forest and Gradient Boosting Machine
 
 ## Train with classification tree
 
@@ -281,15 +282,16 @@ dim(TestData)
 ```r
 set.seed(12345)
 
-decisionTreeMod1 <- rpart(classe ~ ., data=TrainData, method="class")
-fancyRpartPlot(decisionTreeMod1)
+TreeModel <- rpart(classe ~ ., data=TrainData, method="class")
+fancyRpartPlot(TreeModel)
 ```
 
 ![](figures/unnamed-chunk-5-1.png)<!-- -->
 
 ```r
-predictTreeMod1 <- predict(decisionTreeMod1, TestData, type = "class")
-confusionMatrix(predictTreeMod1, as.factor(TestData$classe))$overall[1]
+TreePredict <- predict(TreeModel, TestData, type = "class")
+CTAccuracy <- confusionMatrix(TreePredict, as.factor(TestData$classe))$overall[1]
+CTAccuracy
 ```
 
 ```
@@ -298,7 +300,7 @@ confusionMatrix(predictTreeMod1, as.factor(TestData$classe))$overall[1]
 ```
 \normalsize
 
-##### The accuracy rate of this model is 0.7547
+##### The accuracy rate of this model is 0.7642493
 
 ## Train with Random Forest
 
@@ -306,8 +308,8 @@ confusionMatrix(predictTreeMod1, as.factor(TestData$classe))$overall[1]
 
 ```r
 controlRF <- trainControl(method="cv", number=3, verboseIter=FALSE)
-modRF1 <- train(classe ~ ., data=TrainData, method="rf", trControl=controlRF)
-modRF1$finalModel
+RFModel <- train(classe ~ ., data=TrainData, method="rf", trControl=controlRF)
+RFModel$finalModel
 ```
 
 ```
@@ -329,8 +331,9 @@ modRF1$finalModel
 ```
 
 ```r
-predictRF1 <- predict(modRF1, newdata=TestData)
-confusionMatrix(predictRF1, as.factor(TestData$classe))$overall[1]
+RFPredict <- predict(RFModel, newdata=TestData)
+RFAccuracy <- confusionMatrix(RFPredict, as.factor(TestData$classe))$overall[1]
+RFAccuracy
 ```
 
 ```
@@ -339,17 +342,18 @@ confusionMatrix(predictRF1, as.factor(TestData$classe))$overall[1]
 ```
 \normalsize
 
-##### This model shows an accuracy of 1, which this could be due to overfitting. So let's check against gbm model.
+##### This model shows an accuracy of 1.
 
-## Train with Generalized Boosted Regression model
+
+## Train with Gradient Boosting Machine model
 
 \scriptsize
 
 ```r
 set.seed(12345)
 controlGBM <- trainControl(method = "repeatedcv", number = 5, repeats = 1)
-modGBM  <- train(classe ~ ., data=TrainData, method = "gbm", trControl = controlGBM, verbose = FALSE)
-modGBM$finalModel
+GBMModel  <- train(classe ~ ., data=TrainData, method = "gbm", trControl = controlGBM, verbose = FALSE)
+GBMModel$finalModel
 ```
 
 ```
@@ -359,8 +363,9 @@ modGBM$finalModel
 ```
 
 ```r
-predictGBM <- predict(modGBM, newdata=TestData)
-confusionMatrix(predictGBM, as.factor(TestData$classe))$overall[1]
+GBMPredict <- predict(GBMModel, newdata=TestData)
+GBMAccuracy <- confusionMatrix(GBMPredict, as.factor(TestData$classe))$overall[1]
+GBMAccuracy
 ```
 
 ```
@@ -369,7 +374,7 @@ confusionMatrix(predictGBM, as.factor(TestData$classe))$overall[1]
 ```
 \normalsize
 
-##### The accuracy of this model is 0.9721
+##### The accuracy of this model is 0.9730779
 
 ##### It appears that Random Forest has the best accuracy. So we will use that against the validation data.
 
@@ -378,8 +383,8 @@ confusionMatrix(predictGBM, as.factor(TestData$classe))$overall[1]
 \scriptsize
 
 ```r
-Results <- predict(modRF1, newdata=ValidData)
-Results
+FinalResult <- predict(RFModel, newdata=ValidData)
+FinalResult
 ```
 
 ```
