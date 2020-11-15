@@ -300,7 +300,7 @@ CTAccuracy
 ```
 \normalsize
 
-##### The accuracy rate of this model is 0.7642493
+##### The accuracy rate of this model is 0.7642493 and the out of sample error is 0.2357507.
 
 ## Train with Random Forest
 
@@ -374,7 +374,7 @@ GBMAccuracy
 ```
 \normalsize
 
-##### The accuracy of this model is 0.9730779
+##### The accuracy of this model is 0.9730779 and the out of sample error is 0.0269221
 
 ##### It appears that Random Forest has the best accuracy. So we will use that against the validation data.
 
